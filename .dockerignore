@@ -1,0 +1,25 @@
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+*.db
+.env
+.git/
+.github/
+node_modules/
+frontend/dist/
+security/reports/
+.idea/
+.vscode/
+*.log
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Python environment
+.venv/
+venv/
