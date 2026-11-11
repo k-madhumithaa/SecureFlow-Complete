@@ -38,9 +38,12 @@ pipeline {
 
                         mkdir -p security/reports
 
-                        pytest backend/tests -v \
-                          --junitxml=backend/test-results.xml
+                        # Make backend/app importable by the test suite
+                        export PYTHONPATH="$PWD/backend"
 
+                        pytest backend/tests -v \
+                            --junitxml=backend/test-results.xml
+                            
                         bandit -c security/bandit.yaml \
                           -r backend/app \
                           -f json \
