@@ -2,6 +2,36 @@
 
 SecureFlow combines a React dashboard, Flask API, Docker packaging, Jenkins CI, Ansible deployment playbooks, and Prometheus/Grafana monitoring.
 
+## What is SecureFlow?
+
+SecureFlow is a DevOps Automation and Infrastructure Monitoring Platform that integrates application testing, security scanning, deployment automation, and infrastructure monitoring into one workflow.
+
+It combines a React dashboard and Flask REST API with Jenkins for CI/CD, Docker for containerization, Ansible for deployment automation, and Prometheus and Grafana for monitoring.
+
+## Why is SecureFlow needed?
+
+Software deployment involves repetitive tasks such as testing code, checking vulnerabilities, building application images, deploying services, and monitoring application health.
+
+Performing these tasks manually can lead to human errors, inconsistent deployments, delayed issue detection, and security risks.
+
+SecureFlow addresses these challenges by automating the workflow and providing centralized visibility into application and infrastructure health.
+
+## When is SecureFlow used?
+
+- **During development:** To run automated tests when application code changes.
+- **During continuous integration:** To build applications and perform security scans.
+- **During deployment:** To deploy containerized applications to staging and production environments.
+- **During monitoring:** To track application health, service availability, and infrastructure metrics.
+- **During troubleshooting:** To investigate failed builds, deployment issues, and service failures.
+
+## Benefits of SecureFlow
+
+- **Automation:** Reduces repetitive manual tasks.
+- **Faster delivery:** Streamlines the build, test, and deployment workflow.
+- **Improved security:** Integrates automated code and container vulnerability scanning.
+- **Consistent deployments:** Uses Docker and Ansible for repeatable deployment processes.
+- **Centralized monitoring:** Provides infrastructure and application visibility through Prometheus and Grafana.
+- **Reliability:** Separates staging and production environments and supports rollback procedures.
 ## Features
 - React dashboard backed by a Flask REST API.
 - SQLite persistence for deployment records.
@@ -18,7 +48,7 @@ flowchart TB
   FE --> API[Flask API]
   API --> DB[(SQLite)]
   API --> J[Jenkins API]
-  API --> M[/metrics]
+  API --> METRICS[Metrics endpoint]
   CI[Jenkins Pipeline] --> TEST[Pytest + Bandit + pip-audit]
   CI --> BUILD[Docker image]
   BUILD --> TRIVY[Trivy scan]

@@ -1,0 +1,62 @@
+﻿---
+- name: Deploy SecureFlow to production
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars:
+    app_image: "secureflow:1.1.2"
+    container_name: "secureflow-production"
+    host_port: "5004"
+    container_port: "5000"
+    data_volume: "secureflow-production-data"
+    docker_socket: "unix:///var/run/docker.sock"
+
+  tasks:
+    - name: Create persistent production database volume
+      community.docker.docker_volume:
+        name: "{{ data_volume }}"
+        state: present
+        docker_host: "{{ docker_socket }}"
+
+    - name: Deploy SecureFlow production container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ app_image }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ host_port }}:{{ container_port }}"
+        volumes:
+          - "{{ data_volume }}:/app/backend/instance"
+        docker_host: "{{ docker_socket }}"
+
+    - name: Wait for production health endpoint
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_result
+      retries: 15
+      delay: 2
+      until: health_result.status == 200
+
+    - name: Verify production readiness endpoint
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/ready"
+        method: GET
+        status_code: 200
+      register: ready_result
+      retries: 15
+      delay: 2
+      until: ready_result.status == 200
+
+    - name: Display production deployment result
+      ansible.builtin.debug:
+        msg:
+          - "Production deployment successful."
+          - "Image: {{ app_image }}"
+          - "Container: {{ container_name }}"
+          - "URL: http://localhost:{{ host_port }}"
+          - "Health: HTTP {{ health_result.status }}"
+          - "Readiness: HTTP {{ ready_result.status }}"

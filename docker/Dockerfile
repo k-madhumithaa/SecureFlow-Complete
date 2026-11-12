@@ -36,6 +36,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
+ENV PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
 
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
@@ -53,12 +54,16 @@ RUN rm -rf \
     /usr/local/bin/pip3.13
 
 COPY backend/ /app/backend/
+COPY backend/gunicorn.conf.py /app/backend/gunicorn.conf.py
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh
 
 WORKDIR /app/backend
 
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p instance \
-    && chown -R appuser:appuser /app
+    && mkdir -p instance /tmp/prometheus \
+    && chown -R appuser:appuser /app /tmp/prometheus \
+    && chmod +x /app/entrypoint.sh
 
 USER appuser
 
@@ -67,4 +72,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)" || exit 1
 
-CMD ["gunicorn", "--bind=0.0.0.0:5000", "--workers=2", "--access-logfile=-", "--error-logfile=-", "run:app"]
+ENTRYPOINT ["/app/entrypoint.sh"]

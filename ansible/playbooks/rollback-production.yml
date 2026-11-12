@@ -1,0 +1,64 @@
+﻿---
+- name: Roll back SecureFlow production
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars:
+    rollback_image: "secureflow:1.0.7"
+    container_name: "secureflow-production"
+    host_port: "5004"
+    container_port: "5000"
+    data_volume: "secureflow-production-data"
+    docker_socket: "unix:///var/run/docker.sock"
+
+  tasks:
+    - name: Verify rollback image exists
+      community.docker.docker_image_info:
+        name: "{{ rollback_image }}"
+        docker_host: "{{ docker_socket }}"
+      register: rollback_image_info
+      failed_when: rollback_image_info.images | length == 0
+
+    - name: Roll back production container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ rollback_image }}"
+        state: started
+        recreate: true
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ host_port }}:{{ container_port }}"
+        volumes:
+          - "{{ data_volume }}:/app/backend/instance"
+        docker_host: "{{ docker_socket }}"
+
+    - name: Wait for production health endpoint
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_result
+      retries: 15
+      delay: 2
+      until: health_result.status == 200
+
+    - name: Verify production database readiness
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/ready"
+        method: GET
+        status_code: 200
+      register: ready_result
+      retries: 15
+      delay: 2
+      until: ready_result.status == 200
+
+    - name: Display rollback result
+      ansible.builtin.debug:
+        msg:
+          - "Production rollback successful."
+          - "Rollback image: {{ rollback_image }}"
+          - "Container: {{ container_name }}"
+          - "Database volume preserved: {{ data_volume }}"
+          - "Health: HTTP {{ health_result.status }}"
+          - "Readiness: HTTP {{ ready_result.status }}"

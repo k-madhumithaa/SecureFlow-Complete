@@ -1,10 +1,12 @@
-import logging
+﻿import logging
 from pathlib import Path
 
 from flask import Flask, jsonify
 
 from .config import Config
 from .extensions import db
+from .metrics import register_metrics
+from .routes.jenkins import jenkins_bp
 
 
 def create_app(test_config=None):
@@ -38,6 +40,9 @@ def create_app(test_config=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(status_bp)
     app.register_blueprint(deployments_bp)
+    app.register_blueprint(jenkins_bp)
+
+    register_metrics(app)
 
     @app.errorhandler(404)
     def not_found(error):

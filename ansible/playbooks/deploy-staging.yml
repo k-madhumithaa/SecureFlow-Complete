@@ -1,0 +1,68 @@
+﻿---
+- name: Deploy SecureFlow to staging
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars:
+    app_image: "secureflow:1.1.3"
+    container_name: "secureflow-staging"
+    host_port: "5003"
+    container_port: "5000"
+    data_volume: "secureflow-staging-data"
+    docker_socket: "unix:///var/run/docker.sock"
+
+  tasks:
+    - name: Create persistent staging database volume
+      community.docker.docker_volume:
+        name: "{{ data_volume }}"
+        state: present
+        docker_host: "{{ docker_socket }}"
+
+    - name: Deploy SecureFlow staging container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ app_image }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ host_port }}:{{ container_port }}"
+        volumes:
+          - "{{ data_volume }}:/app/backend/instance"
+        env:
+          JENKINS_URL: "{{ lookup('env', 'JENKINS_URL') }}"
+          JENKINS_USERNAME: "{{ lookup('env', 'JENKINS_USERNAME') }}"
+          JENKINS_API_TOKEN: "{{ lookup('env', 'JENKINS_API_TOKEN') }}"
+          JENKINS_JOB_NAME: "{{ lookup('env', 'JENKINS_JOB_NAME') }}"
+        docker_host: "{{ docker_socket }}"
+      no_log: true
+
+    - name: Wait for staging health endpoint
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_result
+      retries: 15
+      delay: 2
+      until: health_result.status == 200
+
+    - name: Verify staging readiness endpoint
+      ansible.builtin.uri:
+        url: "http://host.docker.internal:{{ host_port }}/ready"
+        method: GET
+        status_code: 200
+      register: ready_result
+      retries: 15
+      delay: 2
+      until: ready_result.status == 200
+
+    - name: Display staging deployment result
+      ansible.builtin.debug:
+        msg:
+          - "Staging deployment successful."
+          - "Image: {{ app_image }}"
+          - "Container: {{ container_name }}"
+          - "URL: http://localhost:{{ host_port }}"
+          - "Health: HTTP {{ health_result.status }}"
+          - "Readiness: HTTP {{ ready_result.status }}"

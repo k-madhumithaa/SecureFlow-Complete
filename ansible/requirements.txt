@@ -1,0 +1,2 @@
+ansible-core==2.19.2
+docker==7.1.0
